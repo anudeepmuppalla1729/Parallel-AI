@@ -1,25 +1,16 @@
-import express from "express";
-import dotenv from "dotenv";
+import { Router } from "express";
 import jiraRoutes from "./api/jira";
 import executionRoutes from "./api/execution";
 
-dotenv.config();
+const router = Router();
 
-const app = express();
+router.use("/jira", jiraRoutes);
+router.use("/execution", executionRoutes);
 
-app.use(express.json());
-
-app.use("/jira", jiraRoutes);
-app.use("/execution", executionRoutes);
-
-app.get("/health", (req, res) => {
+router.get("/health", (req, res) => {
   res.json({
     status: "ok",
   });
 });
 
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+export default router;
