@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { redisClient } from "../config/redis";
 
+import { logger } from "../utils/logger";
+
 const router = Router();
 
 router.get("/lease/:issueKey", async (req, res) => {
@@ -22,7 +24,7 @@ router.get("/lease/:issueKey", async (req, res) => {
       status: leaseStatus,
     });
   } catch (error) {
-    console.error("Error fetching execution lease:", error);
+    logger.error({ err: error, issueKey: req.params.issueKey }, "Error fetching execution lease");
     return res.status(500).json({
       success: false,
       error: "Failed to fetch lease status",

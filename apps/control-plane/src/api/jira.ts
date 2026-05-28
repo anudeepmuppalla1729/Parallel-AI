@@ -5,6 +5,7 @@ import { JiraWebhookPayload } from "../types/jiraWebhook";
 import { taskQueue } from "../queues/taskQueue";
 import { redisClient } from "../config/redis";
 import { prisma } from "../config/db";
+import { logger } from "../utils/logger";
 
 const router = Router();
 
@@ -21,7 +22,7 @@ router.post("/webhook", async (req, res) => {
     const normalizedEvent = normalizeJiraWebhook(payload);
 
     // inspect normalized result
-    console.log(JSON.stringify(normalizedEvent, null, 2));
+    logger.debug({ event: normalizedEvent }, "Normalized Jira webhook event received");
 
     // Handle Task Ownership & Queuing
     const issueKey = normalizedEvent.issue.key;
@@ -49,7 +50,7 @@ router.post("/webhook", async (req, res) => {
       await taskQueue.add("planner-job", normalizedEvent, {
         jobId: `planner-${issueKey}-${Date.now()}`,
       });
-      console.log(`Enqueued task for issue ${issueKey} and set lease to RUNNING`);
+      logger.info({ issueKey }, "Enqueued task for issue and set lease to RUNNING");
     } else if (
       normalizedEvent.eventType === "TASK_UNASSIGNED" ||
       normalizedEvent.eventType === "TASK_ASSIGNED_TO_HUMAN"
@@ -72,14 +73,14 @@ router.post("/webhook", async (req, res) => {
           cancelledAt: new Date(),
         }
       });
-      console.log(`Execution lease for ${issueKey} marked as CANCELLED in DB and Cache`);
+      logger.info({ issueKey, eventType: normalizedEvent.eventType }, "Execution lease marked as CANCELLED in DB and Cache");
     }
 
     return res.status(200).json({
       success: true,
     });
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error }, "Webhook processing failed");
 
     return res.status(500).json({
       error: "Webhook processing failed",
